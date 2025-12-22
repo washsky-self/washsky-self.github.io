@@ -3,14 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Floating Text Relay · Top → Middle → Bottom</title>
+    <title>Washsky · Index</title>
     <style>
       :root {
-        --bg: #0b1020;
-        --panel: rgba(255, 255, 255, 0.06);
-        --border: rgba(255, 255, 255, 0.12);
-        --text: #e9edff;
-        --muted: rgba(233, 237, 255, 0.72);
+        color-scheme: light;
+        font-family: "Noto Sans", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --primary: #2f6fed;
+        --text: #1f2a44;
+        --muted: #6b7a99;
+        --shadow: 0 20px 45px rgba(31, 42, 68, 0.08);
       }
       * {
         box-sizing: border-box;
@@ -20,411 +23,88 @@
         min-height: 100vh;
         background: var(--bg);
         color: var(--text);
-        font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", Arial;
-        overflow: hidden;
       }
-      .wrap {
-        height: 100vh;
-        display: grid;
-        grid-template-rows: auto 1fr;
-        gap: 14px;
-        padding: 18px;
-      }
+
       header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 12px;
-        padding: 12px 14px;
-        border: 1px solid var(--border);
-        background: var(--panel);
-        border-radius: 16px;
-        backdrop-filter: blur(10px);
+        padding: 64px 24px 36px;
       }
-      .title {
-        font-weight: 850;
-        letter-spacing: 0.2px;
-        margin-bottom: 4px;
+
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
       }
-      .hint {
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 3vw, 2.8rem);
+      }
+
+      p {
+        margin: 0 0 24px;
         color: var(--muted);
-        font-size: 13px;
-        line-height: 1.35;
-        max-width: 80ch;
+        font-size: 1rem;
       }
-      button {
-        background: var(--text);
-        color: #0b1020;
-        border: 0;
-        border-radius: 12px;
-        padding: 10px 14px;
-        font-weight: 850;
-        cursor: pointer;
-        white-space: nowrap;
+
+      main {
+        padding: 0 24px 64px;
       }
-      button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-      .stack {
+
+      .list {
         display: grid;
-        grid-template-rows: repeat(3, 1fr);
-        gap: 14px;
-        height: 100%;
+        gap: 16px;
       }
-      .panel {
-        position: relative;
-        border: 1px solid var(--border);
-        background: var(--panel);
-        border-radius: 18px;
-        padding: 16px 18px 18px;
-        overflow: hidden;
-      }
-      .panel h2 {
-        margin: 0 0 10px 0;
-        font-size: 14px;
-        letter-spacing: 0.3px;
-        color: var(--muted);
-        font-weight: 750;
+
+      .card {
+        background: var(--card);
+        padding: 20px 22px;
+        border-radius: 16px;
+        box-shadow: var(--shadow);
         display: flex;
-        justify-content: space-between;
-        gap: 10px;
         align-items: center;
+        justify-content: space-between;
+        gap: 16px;
       }
-      .badge {
-        font-size: 12px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
+
+      .card h2 {
+        margin: 0 0 6px;
+        font-size: 1.1rem;
+      }
+
+      .card span {
         color: var(--muted);
-        background: rgba(255, 255, 255, 0.04);
+        font-size: 0.9rem;
       }
-      .article {
-        position: relative;
-        font-size: 15.5px;
-        line-height: 1.75;
-        letter-spacing: 0.2px;
-        white-space: pre-wrap;
-        word-break: break-word;
-        min-height: calc(100% - 24px);
+
+      .link {
+        text-decoration: none;
+        color: var(--primary);
+        font-weight: 600;
       }
-      .tok {
-        display: inline-block;
-        position: relative;
-        will-change: transform, opacity;
-      }
-      .hidden {
-        opacity: 0;
-        pointer-events: none;
-      }
-      #flyLayer {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 9999;
-      }
-      .flying-token {
-        position: absolute;
-        display: inline-block;
-        white-space: pre;
-        font-size: 15.5px;
-        line-height: 1.75;
-        letter-spacing: 0.2px;
-        font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", Arial;
-        color: var(--text);
-        will-change: transform, opacity;
-        transform: translateZ(0);
+
+      .link:hover {
+        text-decoration: underline;
       }
     </style>
   </head>
 
   <body>
-    <div class="wrap">
-      <header>
-        <div>
-          <div class="title">Floating Text Relay: Top → Middle → Bottom</div>
-          <div class="hint">
-            ✅ Only characters that appear in both the source and target panels will fly (paired in order).<br />
-            ✅ Duplicate characters are matched by occurrence index (1st “e” → 1st “e”, and so on).<br />
-            ❌ New characters appear instantly; removed characters fade out.
-          </div>
-        </div>
-        <button id="go">Advance Panel</button>
-      </header>
-
-      <div class="stack">
-        <section class="panel">
-          <h2>
-            <span>Top / Article One</span>
-            <span class="badge" id="badgeTop">Active</span>
-          </h2>
-          <div class="article" id="articleTop"></div>
-        </section>
-
-        <section class="panel">
-          <h2>
-            <span>Middle / Article Two</span>
-            <span class="badge" id="badgeMid">Hidden</span>
-          </h2>
-          <div class="article hidden" id="articleMid"></div>
-        </section>
-
-        <section class="panel">
-          <h2>
-            <span>Bottom / Article Three</span>
-            <span class="badge" id="badgeBot">Hidden</span>
-          </h2>
-          <div class="article hidden" id="articleBot"></div>
-        </section>
+    <header>
+      <div class="container">
+        <h1>Washsky Index</h1>
+        <p>Quick links to the demos and content hosted in this repository.</p>
       </div>
-    </div>
+    </header>
 
-    <div id="flyLayer"></div>
-
-    <script>
-      const TEXT_TOP = `Before dawn, the city feels like a workshop still warming up.
-      The sky is a dark canvas, and a thin ribbon of light edges the rooftops.
-      I walk slowly, noticing how coffee steam coils upward like a promise.
-      The quiet is not empty; it is a room full of breathing, engines, and memory.
-
-      I write in my notebook about patience, about learning to pace my attention.
-      Even a small routine can be a compass: stretch, sip, breathe, then begin.
-      Progress rarely shouts. It whispers, and you must listen carefully.
-      There is a discipline in the soft moments, and a courage in continuing.
-
-      In the end, I keep one sentence close:
-      move with intention, and let today be kind to tomorrow.`;
-
-      const TEXT_MIDDLE = `By midday, the light is sharper, and the streets feel alive.
-      The same buildings now cast shorter shadows, and every surface hums with heat.
-      I pause to watch a cyclist glide past, steady, focused, and unhurried.
-      The quiet of morning becomes a rhythm of footsteps, questions, and replies.
-
-      I jot a reminder: clarity grows when we focus on one honest task at a time.
-      A schedule is not a cage; it can be a map that protects attention.
-      We do not need to race; we need to keep choosing the next right step.
-      There is energy in consistency, and a deeper kindness in finishing well.
-
-      So I breathe, reset, and keep moving:
-      stay curious, stay grounded, and trust the slow build.`;
-
-      const TEXT_BOTTOM = `At night, the city softens, and the windows turn into quiet lanterns.
-      The air cools, and the day folds itself into a gentler pace.
-      I read a few pages, hearing the steady tick of time like a calm metronome.
-      The questions of the morning are still there, but they no longer feel heavy.
-
-      I write another note: rest is not a reward, it is part of the work.
-      We carry our efforts forward best when we allow ourselves to recover.
-      The future is shaped by ordinary evenings, by small choices made gently.
-      There is grace in ending the day without rushing to the next one.
-
-      And before sleep, I set a simple intention:
-      keep the light on inside, and meet tomorrow with steady hope.`;
-
-      const topEl = document.getElementById('articleTop');
-      const midEl = document.getElementById('articleMid');
-      const botEl = document.getElementById('articleBot');
-      const btn = document.getElementById('go');
-      const badgeTop = document.getElementById('badgeTop');
-      const badgeMid = document.getElementById('badgeMid');
-      const badgeBot = document.getElementById('badgeBot');
-      const flyLayer = document.getElementById('flyLayer');
-
-      const panels = [
-        { el: topEl, badge: badgeTop },
-        { el: midEl, badge: badgeMid },
-        { el: botEl, badge: badgeBot },
-      ];
-
-      let activeIndex = 0;
-      let locked = false;
-
-      const T_FLY = 2200;
-      const EASE_MOVE = 'cubic-bezier(.22,.61,.36,1)';
-
-      function tokenizeCharLevel(text) {
-        const out = [];
-        for (let i = 0; i < text.length; i += 1) {
-          out.push(text[i]);
-        }
-        return out;
-      }
-
-      function render(container, text) {
-        container.innerHTML = '';
-        const tokens = tokenizeCharLevel(text);
-        for (const token of tokens) {
-          const span = document.createElement('span');
-          span.className = 'tok';
-          span.textContent = token;
-          span.dataset.tok = token;
-          container.appendChild(span);
-        }
-      }
-
-      function tagOccurrences(container) {
-        const seen = new Map();
-        container.querySelectorAll('.tok').forEach((node) => {
-          const t = node.dataset.tok;
-          const n = (seen.get(t) || 0) + 1;
-          seen.set(t, n);
-          node.dataset.key = `${t}#${n}`;
-        });
-      }
-
-      function measure(container) {
-        const map = new Map();
-        container.querySelectorAll('.tok').forEach((node) => {
-          map.set(node.dataset.key, node.getBoundingClientRect());
-        });
-        return map;
-      }
-
-      function clearAnimations(el) {
-        try {
-          el.getAnimations({ subtree: true }).forEach((a) => a.cancel());
-        } catch (_) {
-          // no-op
-        }
-      }
-
-      function resetInlineStyles(el) {
-        el.querySelectorAll('.tok').forEach((node) => {
-          node.style.opacity = '';
-          node.style.transform = '';
-          node.style.filter = '';
-          node.style.willChange = '';
-        });
-      }
-
-      function createFlyingToken(text, startBox) {
-        const el = document.createElement('div');
-        el.className = 'flying-token';
-        el.textContent = text;
-        el.style.left = `${startBox.left}px`;
-        el.style.top = `${startBox.top}px`;
-        el.style.opacity = '1';
-        flyLayer.appendChild(el);
-        return el;
-      }
-
-      function animateFlyingToken(el, startBox, endBox) {
-        const dx = endBox.left - startBox.left;
-        const dy = endBox.top - startBox.top;
-        return el.animate(
-          [
-            { transform: 'translate(0,0)', opacity: 1 },
-            { transform: `translate(${dx}px, ${dy}px)`, opacity: 1 },
-          ],
-          { duration: T_FLY, easing: EASE_MOVE, fill: 'both' },
-        );
-      }
-
-      function landingInstant(targetNode, flyingClone) {
-        targetNode.style.opacity = '1';
-        targetNode.style.willChange = '';
-        try {
-          flyingClone.remove();
-        } catch (_) {
-          // no-op
-        }
-      }
-
-      function transition(fromEl, toEl) {
-        clearAnimations(fromEl);
-        clearAnimations(toEl);
-        resetInlineStyles(fromEl);
-        resetInlineStyles(toEl);
-
-        tagOccurrences(fromEl);
-        tagOccurrences(toEl);
-
-        const first = measure(fromEl);
-        const last = measure(toEl);
-
-        fromEl.querySelectorAll('.tok').forEach((node) => {
-          node.style.opacity = '0';
-        });
-
-        toEl.querySelectorAll('.tok').forEach((node) => {
-          const key = node.dataset.key;
-          const firstBox = first.get(key);
-          const lastBox = last.get(key);
-
-          if (firstBox && lastBox) {
-            node.style.opacity = '0';
-            const clone = createFlyingToken(node.textContent, firstBox);
-            const flyAnim = animateFlyingToken(clone, firstBox, lastBox);
-            flyAnim.finished
-              .then(() => {
-                landingInstant(node, clone);
-              })
-              .catch(() => {
-                try {
-                  clone.remove();
-                } catch (_) {
-                  // no-op
-                }
-                node.style.opacity = '1';
-              });
-          } else {
-            node.style.opacity = '1';
-          }
-        });
-      }
-
-      render(topEl, TEXT_TOP);
-      render(midEl, TEXT_MIDDLE);
-      render(botEl, TEXT_BOTTOM);
-
-      function lockFor(ms) {
-        locked = true;
-        btn.disabled = true;
-        setTimeout(() => {
-          locked = false;
-          btn.disabled = false;
-        }, ms);
-      }
-
-      function setPanelVisibility(indexToShow) {
-        panels.forEach((panel, index) => {
-          if (index === indexToShow) {
-            panel.el.classList.remove('hidden');
-            panel.badge.textContent = 'Active';
-          } else {
-            panel.el.classList.add('hidden');
-            panel.badge.textContent = 'Hidden';
-          }
-        });
-      }
-
-      setPanelVisibility(0);
-
-      btn.addEventListener('click', () => {
-        if (locked) return;
-
-        const nextIndex = (activeIndex + 1) % panels.length;
-        const total = T_FLY + 50;
-        lockFor(total);
-
-        const fromPanel = panels[activeIndex];
-        const toPanel = panels[nextIndex];
-
-        toPanel.el.classList.remove('hidden');
-        toPanel.badge.textContent = 'Active';
-        fromPanel.badge.textContent = 'Hidden';
-
-        transition(fromPanel.el, toPanel.el);
-
-        setTimeout(() => {
-          fromPanel.el.classList.add('hidden');
-        }, total);
-
-        activeIndex = nextIndex;
-      });
-    </script>
+    <main class="container">
+      <section class="list">
+        <article class="card">
+          <div>
+            <h2>Floating Text Relay Demo</h2>
+            <span>Top → Middle → Bottom character flight effect with long-form English text.</span>
+          </div>
+          <a class="link" href="./flying-text-demo.html">Open demo →</a>
+        </article>
+      </section>
+    </main>
   </body>
 </html>
