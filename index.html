@@ -1,19 +1,18 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Washsky · 静态主页</title>
+    <title>Washsky · Index</title>
     <style>
       :root {
         color-scheme: light;
-        font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+        font-family: "Noto Sans", "Noto Sans SC", system-ui, -apple-system, sans-serif;
         --bg: #f4f7fb;
         --card: #ffffff;
         --primary: #2f6fed;
         --text: #1f2a44;
         --muted: #6b7a99;
-        --accent: #f97316;
         --shadow: 0 20px 45px rgba(31, 42, 68, 0.08);
       }
 
@@ -28,165 +27,98 @@
       }
 
       header {
-        background: linear-gradient(120deg, #2f6fed, #7f56d9);
-        color: #fff;
-        padding: 64px 24px 80px;
+        padding: 64px 24px 36px;
       }
 
       .container {
-        max-width: 1080px;
+        max-width: 960px;
         margin: 0 auto;
       }
 
-      .hero {
-        display: grid;
-        gap: 24px;
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 3vw, 2.8rem);
       }
 
-      .hero h1 {
-        font-size: clamp(2rem, 4vw, 3.2rem);
-        margin: 0;
-      }
-
-      .hero p {
-        font-size: 1.1rem;
-        margin: 0;
-        color: rgba(255, 255, 255, 0.9);
-      }
-
-      .cta {
-        display: inline-flex;
-        align-items: center;
-        gap: 12px;
-        background: #fff;
-        color: var(--primary);
-        padding: 12px 18px;
-        border-radius: 999px;
-        font-weight: 600;
-        text-decoration: none;
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+      p {
+        margin: 0 0 24px;
+        color: var(--muted);
+        font-size: 1rem;
       }
 
       main {
-        padding: 40px 24px 80px;
+        padding: 0 24px 64px;
       }
 
-      .grid {
+      .list {
         display: grid;
-        gap: 24px;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
       }
 
       .card {
         background: var(--card);
-        padding: 24px;
-        border-radius: 20px;
+        padding: 20px 22px;
+        border-radius: 16px;
         box-shadow: var(--shadow);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
       }
 
-      .card h3 {
-        margin-top: 0;
-        margin-bottom: 12px;
+      .card h2 {
+        margin: 0 0 6px;
+        font-size: 1.1rem;
       }
 
-      .tag {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 999px;
-        background: rgba(47, 111, 237, 0.12);
+      .card span {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .link {
+        text-decoration: none;
         color: var(--primary);
-        font-size: 0.8rem;
         font-weight: 600;
       }
 
-      .timeline {
-        margin-top: 32px;
-        display: grid;
-        gap: 16px;
-      }
-
-      .timeline-item {
-        display: flex;
-        gap: 16px;
-        align-items: flex-start;
-      }
-
-      .dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: var(--accent);
-        margin-top: 6px;
-      }
-
-      footer {
-        text-align: center;
-        color: var(--muted);
-        padding: 24px;
-        font-size: 0.9rem;
+      .link:hover {
+        text-decoration: underline;
       }
     </style>
   </head>
   <body>
     <header>
-      <div class="container hero">
-        <span class="tag">Washsky Lab</span>
-        <h1>灵感在此汇聚，记录每一次探索</h1>
-        <p>这里是一个简洁却充满细节的静态主页，展示项目、想法与未来计划。</p>
-        <a class="cta" href="#projects">查看项目亮点 →</a>
+      <div class="container">
+        <h1>Washsky Index</h1>
+        <p>Quick links to the demos and content hosted in this repository.</p>
       </div>
     </header>
 
     <main class="container">
-      <section id="projects">
-        <h2>项目亮点</h2>
-        <div class="grid">
-          <article class="card">
-            <h3>个人知识库</h3>
-            <p>整理学习笔记、项目复盘与灵感碎片，让知识可检索、可演进。</p>
-            <span class="tag">整理中</span>
-          </article>
-          <article class="card">
-            <h3>创意仪表盘</h3>
-            <p>通过静态数据展示近期目标、节奏安排和可视化回顾。</p>
-            <span class="tag">设计中</span>
-          </article>
-          <article class="card">
-            <h3>开源实验室</h3>
-            <p>记录小而美的前端实验，探索交互与视觉的最佳组合。</p>
-            <span class="tag">持续更新</span>
-          </article>
-        </div>
-      </section>
-
-      <section class="timeline">
-        <h2>未来计划</h2>
-        <div class="timeline-item">
-          <div class="dot"></div>
+      <section class="list">
+        <article class="card">
           <div>
-            <h4>Q2：发布第一版作品集</h4>
-            <p>汇总代表项目，展示设计思考与技术实践。</p>
+            <h2>Floating Text Relay Demo</h2>
+            <span>Top → Middle → Bottom character flight effect with long-form English text.</span>
           </div>
-        </div>
-        <div class="timeline-item">
-          <div class="dot"></div>
+          <a class="link" href="./flying-text-demo.html">Open demo →</a>
+        </article>
+        <article class="card">
           <div>
-            <h4>Q3：上线个人博客</h4>
-            <p>分享学习路径，记录思考过程。</p>
+            <h2>Floating Text Relay (Scrollable)</h2>
+            <span>Six-panel scroll view with focused flight between adjacent articles.</span>
           </div>
-        </div>
-        <div class="timeline-item">
-          <div class="dot"></div>
+          <a class="link" href="./flying-text-demo-scroll.html">Open scroll demo →</a>
+        </article>
+        <article class="card">
           <div>
-            <h4>Q4：开放协作空间</h4>
-            <p>邀请志同道合的伙伴，共同打磨创意。</p>
+            <h2>Floating Text Relay (Scroll First)</h2>
+            <span>Scroll to the next panel first, then launch the character flight.</span>
           </div>
-        </div>
+          <a class="link" href="./flying-text-demo-scroll-focus.html">Open scroll-first demo →</a>
+        </article>
       </section>
     </main>
-
-    <footer>
-      <p>© 2025 Washsky · 静态站点持续建设中</p>
-    </footer>
   </body>
 </html>
