@@ -467,29 +467,33 @@ show up tomorrow with patience and steady courage.`,
       panels[0].article.classList.remove('article--hidden');
       setActive(0);
 
-      btn.addEventListener('click', () => {
-        if (locked) return;
+btn.addEventListener('click', () => {
+  if (locked) return;
 
-        const nextIndex = (activeIndex + 1) % panels.length;
-        const total = SCROLL_BUFFER + T_FLY + 80;
-        lockFor(total);
+  const nextIndex = (activeIndex + 1) % panels.length;
+  const total = SCROLL_BUFFER + T_FLY + 80;
+  lockFor(total);
 
-        resetAllTokens();
-        setAllArticlesHidden();
+  resetAllTokens();
+  setAllArticlesHidden();
 
-        const fromPanel = panels[activeIndex];
-        const toPanel = panels[nextIndex];
+  const fromPanel = panels[activeIndex];
+  const toPanel = panels[nextIndex];
 
-        setActive(nextIndex);
-        toPanel.article.classList.remove('article--hidden');
-        toPanel.panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // 先设置活动状态，但不显示文字
+  setActive(nextIndex);
+  
+  // 滚动到目标面板（文字保持隐藏）
+  toPanel.panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-        setTimeout(() => {
-          transition(fromPanel.article, toPanel.article);
-        }, SCROLL_BUFFER);
+  // 滚动缓冲结束后开始飞行动画，此时目标文字仍隐藏
+  setTimeout(() => {
+    transition(fromPanel.article, toPanel.article);
+  }, SCROLL_BUFFER);
 
-        activeIndex = nextIndex;
-      });
+  activeIndex = nextIndex;
+});
+
     </script>
   </body>
 </html>
