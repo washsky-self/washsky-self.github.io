@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Floating Text Relay · Scroll Focus First</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: rgba(255, 255, 255, 0.06);
+        --border: rgba(255, 255, 255, 0.12);
+        --text: #e9edff;
+        --muted: rgba(233, 237, 255, 0.72);
+        --accent: rgba(122, 162, 255, 0.3);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", Arial;
+        overflow: hidden;
+      }
+      .wrap {
+        height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 14px;
+        padding: 18px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        border-radius: 16px;
+        backdrop-filter: blur(10px);
+      }
+      .title {
+        font-weight: 850;
+        letter-spacing: 0.2px;
+        margin-bottom: 4px;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.35;
+        max-width: 80ch;
+      }
+      button {
+        background: var(--text);
+        color: #0b1020;
+        border: 0;
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-weight: 850;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .stack {
+        display: grid;
+        gap: 14px;
+        height: 100%;
+        overflow-y: auto;
+        padding-right: 6px;
+        scroll-snap-type: y proximity;
+      }
+      .panel {
+        position: relative;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        border-radius: 18px;
+        padding: 16px 18px 18px;
+        overflow: hidden;
+        min-height: 260px;
+        scroll-snap-align: center;
+        transition: border-color 0.25s ease, box-shadow 0.25s ease;
+      }
+      .panel--active {
+        border-color: rgba(122, 162, 255, 0.7);
+        box-shadow: 0 0 0 2px var(--accent);
+      }
+      .panel h2 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        letter-spacing: 0.3px;
+        color: var(--muted);
+        font-weight: 750;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+      .badge {
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .article {
+        position: relative;
+        font-size: 15.5px;
+        line-height: 1.75;
+        letter-spacing: 0.2px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .article--hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .tok {
+        display: inline-block;
+        position: relative;
+        will-change: transform, opacity;
+      }
+      #flyLayer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 9999;
+      }
+      .flying-token {
+        position: absolute;
+        display: inline-block;
+        white-space: pre;
+        font-size: 15.5px;
+        line-height: 1.75;
+        letter-spacing: 0.2px;
+        font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", Arial;
+        color: var(--text);
+        will-change: transform, opacity;
+        transform: translateZ(0);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <header>
+        <div>
+          <div class="title">Floating Text Relay: Scroll First, Then Fly (1 → 6)</div>
+          <div class="hint">
+            ✅ Only the first article starts visible. Each click scrolls to the next panel first,
+            then launches the matching character flight.<br />
+            ✅ Landing locks onto the focused panel for a clean, accurate destination.
+          </div>
+        </div>
+        <button id="go">Advance Panel</button>
+      </header>
+
+      <div class="stack" id="panelStack"></div>
+    </div>
+
+    <div id="flyLayer"></div>
+
+    <script>
+      const ARTICLES = [
+        {
+          title: 'Article One · Before Dawn',
+          text: `Before dawn, the city feels like a workshop still warming up.
+The sky is a dark canvas, and a thin ribbon of light edges the rooftops.
+I walk slowly, noticing how coffee steam coils upward like a promise.
+The quiet is not empty; it is a room full of breathing, engines, and memory.
+
+I write in my notebook about patience, about learning to pace my attention.
+Even a small routine can be a compass: stretch, sip, breathe, then begin.
+Progress rarely shouts. It whispers, and you must listen carefully.
+There is a discipline in the soft moments, and a courage in continuing.
+
+In the end, I keep one sentence close:
+move with intention, and let today be kind to tomorrow.`,
+        },
+        {
+          title: 'Article Two · Midday',
+          text: `By midday, the light is sharper, and the streets feel alive.
+The same buildings now cast shorter shadows, and every surface hums with heat.
+I pause to watch a cyclist glide past, steady, focused, and unhurried.
+The quiet of morning becomes a rhythm of footsteps, questions, and replies.
+
+I jot a reminder: clarity grows when we focus on one honest task at a time.
+A schedule is not a cage; it can be a map that protects attention.
+We do not need to race; we need to keep choosing the next right step.
+There is energy in consistency, and a deeper kindness in finishing well.
+
+So I breathe, reset, and keep moving:
+stay curious, stay grounded, and trust the slow build.`,
+        },
+        {
+          title: 'Article Three · Nightfall',
+          text: `At night, the city softens, and the windows turn into quiet lanterns.
+The air cools, and the day folds itself into a gentler pace.
+I read a few pages, hearing the steady tick of time like a calm metronome.
+The questions of the morning are still there, but they no longer feel heavy.
+
+I write another note: rest is not a reward, it is part of the work.
+We carry our efforts forward best when we allow ourselves to recover.
+The future is shaped by ordinary evenings, by small choices made gently.
+There is grace in ending the day without rushing to the next one.
+
+And before sleep, I set a simple intention:
+keep the light on inside, and meet tomorrow with steady hope.`,
+        },
+        {
+          title: 'Article Four · First Light',
+          text: `The next morning arrives with a quiet clarity.
+A pale sun warms the edges of the room, and the day feels possible again.
+I open the window, letting the breeze rinse the air and the mind.
+There is a kindness in returning to the basics: water, light, and a clean desk.
+
+I make a list that is short and honest.
+One careful task, one brave conversation, one note of gratitude.
+The world does not demand perfection; it asks for presence.
+Even a small promise kept can lift the weight of uncertainty.
+
+I remind myself to move steadily:
+soft steps, clear focus, and a willingness to begin.`,
+        },
+        {
+          title: 'Article Five · Afternoon Drift',
+          text: `Later, the afternoon stretches like a long hallway.
+Time feels elastic, expanding around the things we choose to notice.
+I catch the scent of rain in the distance and the sound of a closing door.
+The moment is ordinary, but it is stitched with quiet meaning.
+
+I review what has been done and what still needs care.
+Momentum is built from small nudges, not dramatic leaps.
+When doubt arrives, I answer with a simple action.
+The work continues, and I continue with it.
+
+I keep a phrase close at hand:
+let the next step be enough for now.`,
+        },
+        {
+          title: 'Article Six · Evening Resolve',
+          text: `By evening, the light softens into amber and blue.
+The day settles into a slower rhythm, the kind that allows reflection.
+I tidy the space, noting the small tools and notes that guided the hours.
+There is quiet satisfaction in putting things back with care.
+
+I write a final line for the day: the path is made by walking.
+We learn by showing up, by making room for rest, and by returning.
+Each close is also a preparation for the next opening.
+Hope is not loud; it is consistent.
+
+So I end the day with a clear vow:
+show up tomorrow with patience and steady courage.`,
+        },
+      ];
+
+      const stack = document.getElementById('panelStack');
+      const btn = document.getElementById('go');
+      const flyLayer = document.getElementById('flyLayer');
+
+      const panels = [];
+
+      const T_FLY = 2200;
+      const EASE_MOVE = 'cubic-bezier(.22,.61,.36,1)';
+      const SCROLL_BUFFER = 500;
+
+      function tokenizeCharLevel(text) {
+        const out = [];
+        for (let i = 0; i < text.length; i += 1) {
+          out.push(text[i]);
+        }
+        return out;
+      }
+
+      function render(container, text) {
+        container.innerHTML = '';
+        const tokens = tokenizeCharLevel(text);
+        for (const token of tokens) {
+          const span = document.createElement('span');
+          span.className = 'tok';
+          span.textContent = token;
+          span.dataset.tok = token;
+          container.appendChild(span);
+        }
+      }
+
+      function tagOccurrences(container) {
+        const seen = new Map();
+        container.querySelectorAll('.tok').forEach((node) => {
+          const t = node.dataset.tok;
+          const n = (seen.get(t) || 0) + 1;
+          seen.set(t, n);
+          node.dataset.key = `${t}#${n}`;
+        });
+      }
+
+      function measure(container) {
+        const map = new Map();
+        container.querySelectorAll('.tok').forEach((node) => {
+          map.set(node.dataset.key, node.getBoundingClientRect());
+        });
+        return map;
+      }
+
+      function clearAnimations(el) {
+        try {
+          el.getAnimations({ subtree: true }).forEach((a) => a.cancel());
+        } catch (_) {
+          // no-op
+        }
+      }
+
+      function resetInlineStyles(el) {
+        el.querySelectorAll('.tok').forEach((node) => {
+          node.style.opacity = '';
+          node.style.transform = '';
+          node.style.filter = '';
+          node.style.willChange = '';
+        });
+      }
+
+      function resetAllTokens() {
+        panels.forEach((panel) => resetInlineStyles(panel.article));
+      }
+
+      function createFlyingToken(text, startBox) {
+        const el = document.createElement('div');
+        el.className = 'flying-token';
+        el.textContent = text;
+        el.style.left = `${startBox.left}px`;
+        el.style.top = `${startBox.top}px`;
+        el.style.opacity = '1';
+        flyLayer.appendChild(el);
+        return el;
+      }
+
+      function animateFlyingToken(el, startBox, endBox) {
+        const dx = endBox.left - startBox.left;
+        const dy = endBox.top - startBox.top;
+        return el.animate(
+          [
+            { transform: 'translate(0,0)', opacity: 1 },
+            { transform: `translate(${dx}px, ${dy}px)`, opacity: 1 },
+          ],
+          { duration: T_FLY, easing: EASE_MOVE, fill: 'both' },
+        );
+      }
+
+      function landingInstant(targetNode, flyingClone) {
+        targetNode.style.opacity = '1';
+        targetNode.style.willChange = '';
+        try {
+          flyingClone.remove();
+        } catch (_) {
+          // no-op
+        }
+      }
+
+      function transition(fromEl, toEl) {
+        clearAnimations(fromEl);
+        clearAnimations(toEl);
+        resetInlineStyles(fromEl);
+        resetInlineStyles(toEl);
+
+        tagOccurrences(fromEl);
+        tagOccurrences(toEl);
+
+        const first = measure(fromEl);
+        const last = measure(toEl);
+
+        fromEl.querySelectorAll('.tok').forEach((node) => {
+          node.style.opacity = '0';
+        });
+
+        toEl.querySelectorAll('.tok').forEach((node) => {
+          const key = node.dataset.key;
+          const firstBox = first.get(key);
+          const lastBox = last.get(key);
+
+          if (firstBox && lastBox) {
+            node.style.opacity = '0';
+            const clone = createFlyingToken(node.textContent, firstBox);
+            const flyAnim = animateFlyingToken(clone, firstBox, lastBox);
+            flyAnim.finished
+              .then(() => {
+                landingInstant(node, clone);
+              })
+              .catch(() => {
+                try {
+                  clone.remove();
+                } catch (_) {
+                  // no-op
+                }
+                node.style.opacity = '1';
+              });
+          } else {
+            node.style.opacity = '1';
+          }
+        });
+      }
+
+      ARTICLES.forEach((article, index) => {
+        const section = document.createElement('section');
+        section.className = 'panel';
+
+        const heading = document.createElement('h2');
+        const title = document.createElement('span');
+        title.textContent = article.title;
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = index === 0 ? 'Active' : 'Idle';
+        heading.append(title, badge);
+
+        const content = document.createElement('div');
+        content.className = 'article';
+        render(content, article.text);
+        if (index !== 0) {
+          content.classList.add('article--hidden');
+        }
+
+        section.append(heading, content);
+        stack.appendChild(section);
+
+        panels.push({
+          panel: section,
+          badge,
+          article: content,
+        });
+      });
+
+      let activeIndex = 0;
+      let locked = false;
+
+      function lockFor(ms) {
+        locked = true;
+        btn.disabled = true;
+        stack.style.overflowY = 'hidden';
+        setTimeout(() => {
+          locked = false;
+          btn.disabled = false;
+          stack.style.overflowY = 'auto';
+        }, ms);
+      }
+
+      function setActive(index) {
+        panels.forEach((panel, idx) => {
+          if (idx === index) {
+            panel.panel.classList.add('panel--active');
+            panel.badge.textContent = 'Active';
+          } else {
+            panel.panel.classList.remove('panel--active');
+            panel.badge.textContent = 'Idle';
+          }
+        });
+      }
+
+      setActive(0);
+
+      btn.addEventListener('click', () => {
+        if (locked) return;
+
+        const nextIndex = (activeIndex + 1) % panels.length;
+        const total = SCROLL_BUFFER + T_FLY + 80;
+        lockFor(total);
+
+        resetAllTokens();
+
+        const fromPanel = panels[activeIndex];
+        const toPanel = panels[nextIndex];
+
+        setActive(nextIndex);
+        toPanel.article.classList.remove('article--hidden');
+
+        toPanel.panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        setTimeout(() => {
+          transition(fromPanel.article, toPanel.article);
+          fromPanel.article.classList.add('article--hidden');
+        }, SCROLL_BUFFER);
+
+        activeIndex = nextIndex;
+      });
+    </script>
+  </body>
+</html>
