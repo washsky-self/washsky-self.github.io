@@ -13,9 +13,7 @@
         --muted: rgba(233, 237, 255, 0.72);
         --accent: rgba(122, 162, 255, 0.3);
       }
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         min-height: 100vh;
@@ -42,17 +40,8 @@
         border-radius: 16px;
         backdrop-filter: blur(10px);
       }
-      .title {
-        font-weight: 850;
-        letter-spacing: 0.2px;
-        margin-bottom: 4px;
-      }
-      .hint {
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.35;
-        max-width: 80ch;
-      }
+      .title { font-weight: 850; letter-spacing: 0.2px; margin-bottom: 4px; }
+      .hint { color: var(--muted); font-size: 13px; line-height: 1.35; max-width: 80ch; }
       button {
         background: var(--text);
         color: #0b1020;
@@ -63,10 +52,8 @@
         cursor: pointer;
         white-space: nowrap;
       }
-      button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
+
       .stack {
         display: grid;
         gap: 14px;
@@ -117,15 +104,19 @@
         white-space: pre-wrap;
         word-break: break-word;
       }
+
+      /* 关键：不再用 display:none 之类影响布局测量，仍可用 opacity 让它“不可见但可测量” */
       .article--hidden {
         opacity: 0;
         pointer-events: none;
       }
+
       .tok {
         display: inline-block;
         position: relative;
         will-change: transform, opacity;
       }
+
       #flyLayer {
         position: fixed;
         top: 0;
@@ -156,8 +147,8 @@
         <div>
           <div class="title">Floating Text Relay: Scroll Focus Locked (1 → 6)</div>
           <div class="hint">
-            ✅ Only the active article is visible. Each click scrolls to the next panel first,
-            then launches the matching character flight so landing stays accurate.
+            ✅ 滚动过程中不会空屏；等滚动稳定后才测量并飞行，避免“凭空起飞/瞬移”。
+            ✅ 手动回滚/滚动会自动取消当前动画并重新锁定 active，仍可继续运行。
           </div>
         </div>
         <button id="go">Advance Panel</button>
@@ -267,16 +258,19 @@ show up tomorrow with patience and steady courage.`,
       const flyLayer = document.getElementById('flyLayer');
 
       const panels = [];
-
-      const T_FLY = 2200;
+      const T_FLY = 1200;
       const EASE_MOVE = 'cubic-bezier(.22,.61,.36,1)';
-      const SCROLL_BUFFER = 450;
+
+      let activeIndex = 0;
+      let locked = false;
+
+      // 保存正在飞行的动画，便于回滚/手动滚动时取消
+      let runningAnims = new Set();
+      let scrollWatchRAF = 0;
 
       function tokenizeCharLevel(text) {
         const out = [];
-        for (let i = 0; i < text.length; i += 1) {
-          out.push(text[i]);
-        }
+        for (let i = 0; i < text.length; i += 1) out.push(text[i]);
         return out;
       }
 
@@ -313,13 +307,20 @@ show up tomorrow with patience and steady courage.`,
       function clearAnimations(el) {
         try {
           el.getAnimations({ subtree: true }).forEach((a) => a.cancel());
-        } catch (_) {
-          // no-op
-        }
+        } catch (_) {}
       }
 
-      function resetInlineStyles(el) {
-        el.querySelectorAll('.tok').forEach((node) => {
+      function cleanupFlyLayer() {
+        // 取消 clone 的动画并清空层
+        runningAnims.forEach((a) => {
+          try { a.cancel(); } catch (_) {}
+        });
+        runningAnims.clear();
+        flyLayer.innerHTML = '';
+      }
+
+      function resetInlineStyles(articleEl) {
+        articleEl.querySelectorAll('.tok').forEach((node) => {
           node.style.opacity = '';
           node.style.transform = '';
           node.style.filter = '';
@@ -327,8 +328,24 @@ show up tomorrow with patience and steady courage.`,
         });
       }
 
-      function resetAllTokens() {
-        panels.forEach((panel) => resetInlineStyles(panel.article));
+      function showOnly(index) {
+        // 只隐藏“非 active”的文章（但保留布局可测量）
+        panels.forEach((p, i) => {
+          if (i === index) p.article.classList.remove('article--hidden');
+          else p.article.classList.add('article--hidden');
+        });
+      }
+
+      function setActive(index) {
+        panels.forEach((panel, idx) => {
+          if (idx === index) {
+            panel.panel.classList.add('panel--active');
+            panel.badge.textContent = 'Active';
+          } else {
+            panel.panel.classList.remove('panel--active');
+            panel.badge.textContent = 'Idle';
+          }
+        });
       }
 
       function createFlyingToken(text, startBox) {
@@ -345,72 +362,152 @@ show up tomorrow with patience and steady courage.`,
       function animateFlyingToken(el, startBox, endBox) {
         const dx = endBox.left - startBox.left;
         const dy = endBox.top - startBox.top;
-        return el.animate(
+        const anim = el.animate(
           [
             { transform: 'translate(0,0)', opacity: 1 },
             { transform: `translate(${dx}px, ${dy}px)`, opacity: 1 },
           ],
-          { duration: T_FLY, easing: EASE_MOVE, fill: 'both' },
+          { duration: T_FLY, easing: EASE_MOVE, fill: 'both' }
         );
+        runningAnims.add(anim);
+        anim.finished.finally(() => runningAnims.delete(anim));
+        return anim;
       }
 
       function landingInstant(targetNode, flyingClone) {
         targetNode.style.opacity = '1';
         targetNode.style.willChange = '';
-        try {
-          flyingClone.remove();
-        } catch (_) {
-          // no-op
-        }
+        try { flyingClone.remove(); } catch (_) {}
       }
 
-      function transition(fromEl, toEl) {
-        clearAnimations(fromEl);
-        clearAnimations(toEl);
-        resetInlineStyles(fromEl);
-        resetInlineStyles(toEl);
+      // 等待滚动稳定（避免“滚动中测量导致瞬移/凭空飞行”）
+      function waitScrollSettled(scroller, { idleMs = 120, maxMs = 1800 } = {}) {
+        return new Promise((resolve) => {
+          const start = performance.now();
+          let lastTop = scroller.scrollTop;
+          let lastMoveAt = performance.now();
 
-        tagOccurrences(fromEl);
-        tagOccurrences(toEl);
+          const tick = () => {
+            const now = performance.now();
+            const top = scroller.scrollTop;
 
-        const first = measure(fromEl);
-        const last = measure(toEl);
+            if (top !== lastTop) {
+              lastTop = top;
+              lastMoveAt = now;
+            }
 
-        fromEl.querySelectorAll('.tok').forEach((node) => {
+            if (now - lastMoveAt >= idleMs) return resolve(true);
+            if (now - start >= maxMs) return resolve(false);
+
+            scrollWatchRAF = requestAnimationFrame(tick);
+          };
+
+          cancelAnimationFrame(scrollWatchRAF);
+          scrollWatchRAF = requestAnimationFrame(tick);
+        });
+      }
+
+      function transition(fromArticle, toArticle) {
+        cleanupFlyLayer();
+
+        clearAnimations(fromArticle);
+        clearAnimations(toArticle);
+        resetInlineStyles(fromArticle);
+        resetInlineStyles(toArticle);
+
+        // 必须保证二者都“可测量”
+        fromArticle.classList.remove('article--hidden');
+        toArticle.classList.remove('article--hidden');
+
+        tagOccurrences(fromArticle);
+        tagOccurrences(toArticle);
+
+        const first = measure(fromArticle);
+        const last = measure(toArticle);
+
+        // 让 from 的 token 先隐藏（保留文本布局不变）
+        fromArticle.querySelectorAll('.tok').forEach((node) => {
           node.style.opacity = '0';
         });
 
-        toEl.querySelectorAll('.tok').forEach((node) => {
+        // to 的 token 飞入：起点 firstBox，终点 lastBox
+        toArticle.querySelectorAll('.tok').forEach((node) => {
           const key = node.dataset.key;
           const firstBox = first.get(key);
           const lastBox = last.get(key);
 
           if (firstBox && lastBox) {
             node.style.opacity = '0';
+            node.style.willChange = 'opacity';
+
             const clone = createFlyingToken(node.textContent, firstBox);
             const flyAnim = animateFlyingToken(clone, firstBox, lastBox);
+
             flyAnim.finished
-              .then(() => {
-                landingInstant(node, clone);
-              })
+              .then(() => landingInstant(node, clone))
               .catch(() => {
-                try {
-                  clone.remove();
-                } catch (_) {
-                  // no-op
-                }
+                try { clone.remove(); } catch (_) {}
                 node.style.opacity = '1';
               });
           } else {
+            // 没匹配到的字符直接显示
             node.style.opacity = '1';
           }
         });
+
+        // 飞行完成后，回到“只显示 active”
+        setTimeout(() => {
+          cleanupFlyLayer();
+          showOnly(activeIndex);
+        }, T_FLY + 40);
       }
 
-      function setAllArticlesHidden() {
-        panels.forEach((panel) => panel.article.classList.add('article--hidden'));
+      function lockUI(isLock) {
+        locked = isLock;
+        btn.disabled = isLock;
+        // 不再强制 overflow hidden（否则某些浏览器 smooth scroll 期间测量更怪）
+        // stack.style.overflowY = isLock ? 'hidden' : 'auto';
       }
 
+      // 根据视口中心找“当前最居中 panel”，用于回滚/手动滚动后恢复状态
+      function findCenteredPanelIndex() {
+        const stackRect = stack.getBoundingClientRect();
+        const centerY = stackRect.top + stackRect.height / 2;
+
+        let bestIdx = 0;
+        let bestDist = Infinity;
+
+        panels.forEach((p, i) => {
+          const r = p.panel.getBoundingClientRect();
+          const cy = r.top + r.height / 2;
+          const d = Math.abs(cy - centerY);
+          if (d < bestDist) {
+            bestDist = d;
+            bestIdx = i;
+          }
+        });
+
+        return bestIdx;
+      }
+
+      // 手动滚动/回滚：取消动画并重新锁定 active（确保还能继续点击运行）
+      let userScrollTimer = 0;
+      stack.addEventListener('scroll', () => {
+        if (locked) return;
+
+        // 用户滚动就取消飞行，避免“飞行中位置变化”导致视觉穿帮
+        cleanupFlyLayer();
+
+        clearTimeout(userScrollTimer);
+        userScrollTimer = setTimeout(() => {
+          const idx = findCenteredPanelIndex();
+          activeIndex = idx;
+          setActive(idx);
+          showOnly(idx);
+        }, 90);
+      }, { passive: true });
+
+      // 渲染面板
       ARTICLES.forEach((article, index) => {
         const section = document.createElement('section');
         section.className = 'panel';
@@ -430,65 +527,53 @@ show up tomorrow with patience and steady courage.`,
         section.append(heading, content);
         stack.appendChild(section);
 
-        panels.push({
-          panel: section,
-          badge,
-          article: content,
-        });
+        panels.push({ panel: section, badge, article: content });
       });
 
-      let activeIndex = 0;
-      let locked = false;
-
-      function lockFor(ms) {
-        locked = true;
-        btn.disabled = true;
-        stack.style.overflowY = 'hidden';
-        setTimeout(() => {
-          locked = false;
-          btn.disabled = false;
-          stack.style.overflowY = 'auto';
-        }, ms);
-      }
-
-      function setActive(index) {
-        panels.forEach((panel, idx) => {
-          if (idx === index) {
-            panel.panel.classList.add('panel--active');
-            panel.badge.textContent = 'Active';
-          } else {
-            panel.panel.classList.remove('panel--active');
-            panel.badge.textContent = 'Idle';
-          }
-        });
-      }
-
-      setAllArticlesHidden();
-      panels[0].article.classList.remove('article--hidden');
+      // 初始：只显示第一个
       setActive(0);
+      showOnly(0);
 
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         if (locked) return;
+        lockUI(true);
 
+        cleanupFlyLayer();
+
+        const fromIndex = activeIndex;
         const nextIndex = (activeIndex + 1) % panels.length;
-        const total = SCROLL_BUFFER + T_FLY + 80;
-        lockFor(total);
 
-        resetAllTokens();
-        setAllArticlesHidden();
-
-        const fromPanel = panels[activeIndex];
+        const fromPanel = panels[fromIndex];
         const toPanel = panels[nextIndex];
 
-        setActive(nextIndex);
+        // 滚动期间：from 可见；to 可见但 token 透明（避免滚动时空屏 + 避免重复显示）
+        panels.forEach((p, i) => {
+          p.article.classList.add('article--hidden');
+          resetInlineStyles(p.article);
+        });
+
+        fromPanel.article.classList.remove('article--hidden');
         toPanel.article.classList.remove('article--hidden');
+
+        // 先把 to 的 token 全透明（但保持布局存在，方便 scroll + 之后测量）
+        toPanel.article.querySelectorAll('.tok').forEach((n) => (n.style.opacity = '0'));
+
+        // 设置 active（高亮框跟着目标走）
+        activeIndex = nextIndex;
+        setActive(nextIndex);
+
+        // 先滚动到目标
         toPanel.panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-        setTimeout(() => {
-          transition(fromPanel.article, toPanel.article);
-        }, SCROLL_BUFFER);
+        // 关键：等滚动稳定后再测量并开始飞行
+        await waitScrollSettled(stack, { idleMs: 120, maxMs: 2000 });
 
-        activeIndex = nextIndex;
+        // 再飞
+        transition(fromPanel.article, toPanel.article);
+
+        // 解锁（允许用户滚动/回滚）
+        // 飞行期间也允许滚动，但用户滚动会自动 cancel 并恢复 active
+        setTimeout(() => lockUI(false), 60);
       });
     </script>
   </body>
