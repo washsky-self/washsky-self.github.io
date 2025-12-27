@@ -414,6 +414,11 @@ show up tomorrow with patience and steady courage.`,
         panels.forEach((panel) => panel.article.classList.add('article--hidden'));
       }
 
+      function showOnly(index) {
+        setAllArticlesHidden();
+        panels[index].article.classList.remove('article--hidden');
+      }
+
       ARTICLES.forEach((article, index) => {
         const section = document.createElement('section');
         section.className = 'panel';
@@ -466,8 +471,7 @@ show up tomorrow with patience and steady courage.`,
         });
       }
 
-      setAllArticlesHidden();
-      panels[0].article.classList.remove('article--hidden');
+      showOnly(0);
       setActive(0);
 
       btn.addEventListener('click', () => {
@@ -478,18 +482,22 @@ show up tomorrow with patience and steady courage.`,
         lockFor(total);
 
         resetAllTokens();
-        setAllArticlesHidden();
+        showOnly(activeIndex);
 
         const fromPanel = panels[activeIndex];
         const toPanel = panels[nextIndex];
 
         setActive(nextIndex);
-        toPanel.article.classList.remove('article--hidden');
         toPanel.panel.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
 
         setTimeout(() => {
+          toPanel.article.classList.remove('article--hidden');
           transition(fromPanel.article, toPanel.article);
         }, SCROLL_BUFFER);
+
+        setTimeout(() => {
+          showOnly(nextIndex);
+        }, SCROLL_BUFFER + T_FLY + 40);
 
         activeIndex = nextIndex;
       });
